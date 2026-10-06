@@ -10,6 +10,21 @@ app.use(express.json());
 
 let connection = null;
 
+async function query(sql, params) {
+    //Singleton DB connection
+    if (null === connection) {
+        console.log('Here');
+        connection = await mysql.createConnection({
+            host: "student-databases.cvode4s4cwrc.us-west-2.rds.amazonaws.com",
+            user: "DONOVANRAMIREZ",
+            password: "utpMeBEuZ0D8gRpUsu3zpaI7wh5jFq6X5oQ",
+            database: 'DONOVANRAMIREZ'
+        });
+    }
+    const [results, ] = await connection.execute(sql, params);
+    return results;
+}
+
 app.post("/pa3", async (req, res) => {
     const { pot_val } = req.body;
 
@@ -38,20 +53,6 @@ app.post("/pa3", async (req, res) => {
     }
 });
 
-async function query(sql, params) {
-    //Singleton DB connection
-    if (null === connection) {
-        console.log('Here');
-        connection = await mysql.createConnection({
-            host: "student-databases.cvode4s4cwrc.us-west-2.rds.amazonaws.com",
-            user: "DONOVANRAMIREZ",
-            password: "utpMeBEuZ0D8gRpUsu3zpaI7wh5jFq6X5oQ",
-            database: 'DONOVANRAMIREZ'
-        });
-    }
-    const [results, ] = await connection.execute(sql, params);
-    return results;
-}
 
 
 
