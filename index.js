@@ -8,11 +8,23 @@ const app = express();
 
 app.use(express.json());
 
-app.post("/api/sensor", (req, res) => {
-    console.log(req.body);
-    res.json({
-        message: "Sensor data received"
-    });
+app.post("/pa3/", async(req, res) => {
+    let result = {};
+    
+    try {
+        const potVal = req.body;
+
+        const insertSql = 'INSERT INTO pa3 (pot_val) VALUES (potVal)';
+
+        const [result,packet] = await query(insertSql, [potVal]);
+
+        result = await query(insertSql, queryParameters);
+
+        response.status(201).json({ message: "Potval Added"});
+    }catch (error){
+        console.log(error);
+        return response.status(500).json({message: "Uh oh"});
+    }
 });
 
 async function query(sql, params) {
@@ -29,7 +41,6 @@ async function query(sql, params) {
     const [results, ] = await connection.execute(sql, params);
     return results;
 }
-
 
 app.listen(3000, () => {
     console.log("Server running on port 3000");
