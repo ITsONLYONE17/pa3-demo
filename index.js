@@ -1,4 +1,8 @@
-const express = require("express");
+//Libraries
+const express = require('express');
+const multer = require('multer');
+const mysql = require('mysql2/promise');
+const { check, validationResult } = require('express-validator');
 
 const app = express();
 
