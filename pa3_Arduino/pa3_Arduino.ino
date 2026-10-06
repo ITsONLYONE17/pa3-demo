@@ -11,6 +11,7 @@ char server[] = "18.216.101.113";
 WiFiClient client;
 
 Servo myServo;
+int jsonData; 
 int const potPin = A0; 
 int potVal; 
 int angle; 
@@ -34,9 +35,6 @@ void setup() {
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
 
-  // Data we want to send
-  String jsonData = "{\"temperature\":72.5,\"humidity\":41}";
-
   Serial.println("Connecting to server...");
 
   // Change the port number here
@@ -50,13 +48,9 @@ void setup() {
     client.println("Content-Type: application/json");
 
     client.print("Content-Length: ");
-    client.println(jsonData.length());
 
     client.println("Connection: close");
     client.println();
-
-    // HTTP request body
-    client.println(jsonData);
 
   } else {
     Serial.println("Connection failed.");
@@ -73,6 +67,9 @@ void loop() {
   Serial.println(angle); 
 
   myServo.write(angle);
+  jsonData = angle;
+  // HTTP request body
+  client.println(jsonData);
   delay(1000);
 
   // Display the server response
