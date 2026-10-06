@@ -9,29 +9,17 @@ app.use(express.json());
 let connectionPromise;
 
 async function query(sql, params) {
-    if (!connectionPromise) {
-        const config = {
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            database: process.env.DB_NAME
-        };
-        const missingConfig = Object.entries(config)
-            .filter(([, value]) => !value)
-            .map(([key]) => key);
-
-        if (missingConfig.length > 0) {
-            throw new Error(`Missing database configuration: ${missingConfig.join(', ')}`);
-        }
-
-        connectionPromise = mysql.createConnection(config).catch((error) => {
-            connectionPromise = undefined;
-            throw error;
+    //Singleton DB connection
+    if (null === connection) {
+        console.log('Here');
+        connection = await mysql.createConnection({
+            host: "student-databases.cvode4s4cwrc.us-west-2.rds.amazonaws.com",
+            user: "DONOVANRAMIREZ",
+            password: "utpMeBEuZ0D8gRpUsu3zpaI7wh5jFq6X5oQ",
+            database: 'DONOVANRAMIREZ'
         });
     }
-
-    const connection = await connectionPromise;
-    const [results] = await connection.execute(sql, params);
+    const [results, ] = await connection.execute(sql, params);
     return results;
 }
 
