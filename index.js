@@ -6,7 +6,13 @@ const { check, validationResult } = require('express-validator');
 
 const app = express();
 
+app.use((req, res, next) => {
+    console.log(`[HTTP] ${req.method} ${req.originalUrl} (${req.get('content-type') || 'no content-type'})`);
+    next();
+});
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 let connection = null;
 
@@ -26,9 +32,16 @@ async function query(sql, params) {
 }
 
 app.post("/pa3", async (req, res) => {
-    const { pot_val } = req.body;
+    const rawPotValue = req.body && req.body.pot_val;
+    console.log("[POST /pa3] received pot_val:", rawPotValue);
 
-    if (typeof pot_val !== 'number' || !Number.isFinite(pot_val)) {
+    const pot_val = typeof rawPotValue === 'number'
+        ? rawPotValue
+        : typeof rawPotValue === 'string' && rawPotValue.trim() !== ''
+            ? Number(rawPotValue)
+            : NaN;
+
+    if (!Number.isFinite(pot_val)) {
         return res.status(400).json({
             error: "pot_val must be a finite number"
         });
