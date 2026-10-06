@@ -8,11 +8,34 @@ const app = express();
 
 app.use(express.json());
 
-app.post("/pa3", (req, res) => {
-    console.log(req.body);
-    res.json({
-        message: "Sensor data received"
-    });
+let connection = null;
+
+app.post("/pa3", async (req, res) => {
+    const { pot_val } = req.body;
+
+    if (typeof pot_val !== 'number' || !Number.isFinite(pot_val)) {
+        return res.status(400).json({
+            error: "pot_val must be a finite number"
+        });
+    }
+
+    try {
+        const result = await query(
+            'INSERT INTO pa3 (pot_val) VALUES (?)',
+            [pot_val]
+        );
+
+        res.status(201).json({
+            message: "Sensor data saved",
+            id: result.insertId,
+            pot_val
+        });
+    } catch (error) {
+        console.error("Failed to save sensor data:", error);
+        res.status(500).json({
+            error: "Failed to save sensor data"
+        });
+    }
 });
 
 async function query(sql, params) {
