@@ -1,47 +1,74 @@
-//Libraries
 const express = require('express');
-const multer = require('multer');
 const mysql = require('mysql2/promise');
-const { check, validationResult } = require('express-validator');
 
 const app = express();
+const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
-app.post("/pa3/", async(req, res) => {
-    let result = {};
-    
-    try {
-        const potVal = req.body;
-
-        const insertSql = 'INSERT INTO pa3 (pot_val) VALUES (potVal)';
-
-        const [result,packet] = await query(insertSql, [potVal]);
-
-        result = await query(insertSql, queryParameters);
-
-        response.status(201).json({ message: "Potval Added"});
-    }catch (error){
-        console.log(error);
-        return response.status(500).json({message: "Uh oh"});
-    }
-});
+let connectionPromise;
 
 async function query(sql, params) {
-    //Singleton DB connection
-    if (null === connection) {
-        console.log('Here');
-        connection = await mysql.createConnection({
-            host: "student-databases.cvode4s4cwrc.us-west-2.rds.amazonaws.com",
-            user: "DONOVANRAMIREZ",
-            password: "utpMeBEuZ0D8gRpUsu3zpaI7wh5jFq6X5oQ",
-            database: 'DONOVANRAMIREZ'
+    if (!connectionPromise) {
+        const config = {
+            host: process.env.DB_HOST,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME
+        };
+        const missingConfig = Object.entries(config)
+            .filter(([, value]) => !value)
+            .map(([key]) => key);
+
+        if (missingConfig.length > 0) {
+            throw new Error(`Missing database configuration: ${missingConfig.join(', ')}`);
+        }
+
+        connectionPromise = mysql.createConnection(config).catch((error) => {
+            connectionPromise = undefined;
+            throw error;
         });
     }
-    const [results, ] = await connection.execute(sql, params);
+
+    const connection = await connectionPromise;
+    const [results] = await connection.execute(sql, params);
     return results;
 }
 
-app.listen(3000, () => {
-    console.log("Server running on port 3000");
+app.post('/pa3/', async (request, response) => {
+    const body = request.body;
+    const rawPotValue = typeof body === 'number'
+        ? body
+        : body?.potval ?? body?.potVal ?? body?.pot_val;
+
+    if (
+        (typeof rawPotValue !== 'number' && typeof rawPotValue !== 'string') ||
+        (typeof rawPotValue === 'string' && rawPotValue.trim() === '')
+    ) {
+        return response.status(400).json({ message: 'A numeric potval value is required' });
+    }
+
+    const potValue = Number(rawPotValue);
+    if (!Number.isFinite(potValue)) {
+        return response.status(400).json({ message: 'A numeric potval value is required' });
+    }
+
+    try {
+        const result = await query(
+            'INSERT INTO pa3 (pot_val) VALUES (?)',
+            [potValue]
+        );
+
+        return response.status(201).json({
+            message: 'Potval added',
+            id: result.insertId
+        });
+    } catch (error) {
+        console.error('Failed to insert potval:', error);
+        return response.status(500).json({ message: 'Failed to save potval' });
+    }
+});
+
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
 });
