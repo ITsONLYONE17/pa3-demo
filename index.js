@@ -4,28 +4,42 @@ const mysql = require('mysql2/promise');
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json({ strict: false }));
+app.use(express.urlencoded({ extended: false }));
+app.use(express.text({ type: 'text/plain' }));
 
 let connectionPromise;
 
 async function query(sql, params) {
-    //Singleton DB connection
-    if (null === connection) {
-        console.log('Here');
-        connection = await mysql.createConnection({
-            host: "student-databases.cvode4s4cwrc.us-west-2.rds.amazonaws.com",
-            user: "DONOVANRAMIREZ",
-            password: "utpMeBEuZ0D8gRpUsu3zpaI7wh5jFq6X5oQ",
-            database: 'DONOVANRAMIREZ'
+    if (!connectionPromise) {
+        const config = {
+            host: process.env.DB_HOST,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME
+        };
+        const missingConfig = Object.entries(config)
+            .filter(([, value]) => !value)
+            .map(([key]) => key);
+
+        if (missingConfig.length > 0) {
+            throw new Error(`Missing database configuration: ${missingConfig.join(', ')}`);
+        }
+
+        connectionPromise = mysql.createConnection(config).catch((error) => {
+            connectionPromise = undefined;
+            throw error;
         });
     }
+
+    const connection = await connectionPromise;
     const [results, ] = await connection.execute(sql, params);
     return results;
 }
 
 app.post('/pa3/', async (request, response) => {
     const body = request.body;
-    const rawPotValue = typeof body === 'number'
+    const rawPotValue = typeof body === 'number' || typeof body === 'string'
         ? body
         : body?.potval ?? body?.potVal ?? body?.pot_val;
 
@@ -33,12 +47,12 @@ app.post('/pa3/', async (request, response) => {
         (typeof rawPotValue !== 'number' && typeof rawPotValue !== 'string') ||
         (typeof rawPotValue === 'string' && rawPotValue.trim() === '')
     ) {
-        return response.status(400).json({ message: 'A numeric potval value is required' });
+        return response.status(400).json({ message: 'A numeric pot value is required' });
     }
 
     const potValue = Number(rawPotValue);
     if (!Number.isFinite(potValue)) {
-        return response.status(400).json({ message: 'A numeric potval value is required' });
+        return response.status(400).json({ message: 'A numeric pot value is required' });
     }
 
     try {
@@ -52,7 +66,7 @@ app.post('/pa3/', async (request, response) => {
             id: result.insertId
         });
     } catch (error) {
-        console.error('Failed to insert potval:', error);
+        console.error('Failed to insert potval:', error.message);
         return response.status(500).json({ message: 'Failed to save potval' });
     }
 });
